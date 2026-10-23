@@ -1,0 +1,5 @@
+(executable
+ (name main)
+ (public_name ostd-lint)
+ (package ostd-lint)
+ (libraries compiler-libs.common))
