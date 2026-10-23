@@ -1,0 +1,105 @@
+(* Is it safe to compare values of a given type with polymorphic compare? *)
+
+type verdict =
+  | Safe
+  | Generic  (** a type variable: generic code relying on polymorphic compare *)
+  | Abstract of string  (** display name of the abstract type *)
+  | Functional  (** contains closures: compare raises at runtime *)
+
+let rank = function
+  | Safe -> 0
+  | Generic -> 1
+  | Abstract _ -> 2
+  | Functional -> 3
+
+let worst a b = if rank b > rank a then b else a
+
+let safe_builtins =
+  Predef.
+    [
+      path_int;
+      path_char;
+      path_string;
+      path_bytes;
+      path_float;
+      path_bool;
+      path_unit;
+      path_nativeint;
+      path_int32;
+      path_int64;
+      path_floatarray;
+      path_exn;
+      path_extension_constructor;
+    ]
+
+(* Abstract in their .mli but represented by safe immediates. *)
+let safe_named = [ "Stdlib.Uchar.t"; "Stdlib__Uchar.t"; "Uchar.t" ]
+let containers = Predef.[ path_list; path_option; path_array ]
+let mem_path p l = List.exists (Path.same p) l
+let max_depth = 64
+
+(* Also drops dune's internal alias modules: "Re__.Cset.t" -> "Cset.t". *)
+let display_path p =
+  let name =
+    match Targets.normalize (Path.name p) with
+    | Some n -> n
+    | None -> Path.name p
+  in
+  String.split_on_char '.' name
+  |> List.filter (fun c -> not (String.ends_with ~suffix:"__" c))
+  |> String.concat "."
+
+let rec classify_in env visited depth ty =
+  if depth > max_depth then Safe
+  else
+    (* The name the user wrote (e.g. [SM.t]), before expansion turns it into
+       [Map.Make(Stdlib__String).t]. *)
+    let written =
+      match Compat.view ty with Constr (p, _) -> Some p | _ -> None
+    in
+    let ty = try Ctype.expand_head env ty with _ -> ty in
+    let recur = classify_in env visited (depth + 1) in
+    match Compat.view ty with
+    | Arrow _ | Package -> Functional
+    | Var -> Generic
+    | Poly t -> recur t
+    | Object -> Abstract "object"
+    | Tuple ts | Poly_variant ts -> worst_of recur ts
+    | Other -> Safe
+    | Constr (p, args) -> (
+        if mem_path p safe_builtins || List.mem (Path.name p) safe_named then
+          Safe
+        else if Path.same p Predef.path_lazy_t then Abstract "Lazy.t"
+        else if mem_path p containers then worst_of recur args
+        else if List.exists (Path.same p) visited then
+          (* Recursive occurrence: the shape is already being checked, but
+             the arguments may differ (e.g. [(int -> int) t t]). *)
+          worst_of recur args
+        else
+          match Env.find_type p env with
+          | exception Not_found -> Safe (* unknown: avoid false positives *)
+          | decl -> (
+              let visited = p :: visited in
+              let recur = classify_in env visited (depth + 1) in
+              let inst t =
+                try Ctype.apply env decl.type_params t args with _ -> t
+              in
+              match Compat.decl_shape decl with
+              | Abstract_decl ->
+                  Abstract (display_path (Option.value written ~default:p))
+              | Manifest m -> recur (inst m)
+              | Fields ts -> worst_of recur (List.map inst ts)
+              | Open_decl -> Safe))
+
+and worst_of f ts =
+  List.fold_left
+    (fun acc t -> if acc = Functional then acc else worst acc (f t))
+    Safe ts
+
+let classify (env : Env.t) (ty : Types.type_expr) : verdict =
+  classify_in env [] 0 ty
+
+(* The type of the first argument of a function type, if any. *)
+let first_arg env ty =
+  let ty = try Ctype.expand_head env ty with _ -> ty in
+  match Compat.view ty with Arrow a -> Some a | _ -> None

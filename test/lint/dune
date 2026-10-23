@@ -1,0 +1,5 @@
+(cram
+ (deps
+  %{bin:ostd-lint}
+  (package ostd)
+  (glob_files fixtures/*.ml)))
