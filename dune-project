@@ -34,4 +34,8 @@
   "ostd-lint reads the .cmt files dune produces and flags polymorphic comparison (=, compare, List.mem, Hashtbl.hash, ...) on functions, abstract types such as Map and Hashtbl, and optionally generic code.")
  (depends
   (ocaml
-   (and (>= 5.3.0) (< 5.4)))))
+   (and
+    (>= 5.3.0)
+    (< 5.4)))
+  (ostd :with-test)
+  (ocamlfind :with-test)))

@@ -357,14 +357,14 @@ positives you can't justify.
 
 ## Milestone checklist
 
-- [ ] Prior-art review done, `docs/gaps.md` written
-- [ ] Scaffold builds, CI green
-- [ ] List, String, Option, Result extensions + tests
-- [ ] Map/Set extensions + tests
-- [ ] Heap + Deque + property tests
-- [ ] Safe module
-- [ ] Linter: reads .cmt, finds target idents
-- [ ] Linter: classifier + SL001/SL002/SL003
-- [ ] Linter: suppression, CLI flags, version check
-- [ ] Linter: cram fixtures pass; real-world triage done
+- [x] Prior-art review done, `docs/gaps.md` written
+- [x] Scaffold builds, CI green
+- [x] List, String, Option, Result extensions + tests
+- [x] Map/Set extensions + tests
+- [x] Heap + Deque + property tests
+- [x] Safe module
+- [x] Linter: reads .cmt, finds target idents
+- [x] Linter: classifier + SL001/SL002/SL003
+- [x] Linter: suppression, CLI flags, version check
+- [x] Linter: cram fixtures pass; real-world triage done
 - [ ] README, docs, v0.1 on opam

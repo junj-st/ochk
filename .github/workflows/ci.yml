@@ -14,14 +14,16 @@ jobs:
           # Minimum supported version: library and linter.
           - ocaml-compiler: "5.3"
             packages: "ostd,ostd-lint"
+            opamfiles: "./ostd.opam ./ostd-lint.opam"
           # Latest 5.x: library only (the linter is tied to one compiler).
           - ocaml-compiler: "5"
             packages: "ostd"
+            opamfiles: "./ostd.opam"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
-      - run: opam install . --deps-only --with-test --yes
+      - run: opam install ${{ matrix.opamfiles }} --deps-only --with-test --yes
       - run: opam exec -- dune build --only-packages ${{ matrix.packages }} @all @runtest

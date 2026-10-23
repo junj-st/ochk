@@ -1,4 +1,5 @@
 (cram
+ (package ostd-lint)
  (deps
   %{bin:ostd-lint}
   (package ostd)

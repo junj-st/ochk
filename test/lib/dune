@@ -1,3 +1,4 @@
 (test
  (name test_ostd)
+ (package ostd)
  (libraries ostd alcotest qcheck-core qcheck-alcotest))

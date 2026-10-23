@@ -11,6 +11,8 @@ bug-reports: "https://github.com/junj-st/ostd/issues"
 depends: [
   "dune" {>= "3.14"}
   "ocaml" {>= "5.3.0" & < "5.4"}
+  "ostd" {with-test}
+  "ocamlfind" {with-test}
   "odoc" {with-doc}
 ]
 build: [
