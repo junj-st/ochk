@@ -89,8 +89,10 @@ Identifiers re-exported through ostd are still caught.
 
 open Ostd.Safe rejects polymorphic = on strings at compile time.
 
-  $ ocamlfind ocamlc -package ostd -c fixtures/safe_reject.ml 2>&1 | grep -o 'This constant has type "string"'
-  This constant has type "string"
+  $ ocamlfind ocamlc -package ostd -c fixtures/safe_reject.ml > err.txt 2>&1
+  [2]
+  $ grep -o 'line 5, characters 10-13' err.txt
+  line 5, characters 10-13
 
 Directory walk, --only filter, JSON output.
 
