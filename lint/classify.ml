@@ -33,7 +33,16 @@ let safe_builtins =
     ]
 
 (* Abstract in their .mli but represented by safe immediates. *)
-let safe_named = [ "Stdlib.Uchar.t"; "Stdlib__Uchar.t"; "Uchar.t" ]
+let safe_named =
+  [
+    "Stdlib.Uchar.t";
+    "Stdlib__Uchar.t";
+    "Uchar.t";
+    (* An int on Unix, a custom block with its own compare on Windows. *)
+    "Unix.file_descr";
+    "UnixLabels.file_descr";
+  ]
+
 let containers = Predef.[ path_list; path_option; path_array ]
 let mem_path p l = List.exists (Path.same p) l
 let max_depth = 64
@@ -49,7 +58,15 @@ let display_path p =
   |> List.filter (fun c -> not (String.ends_with ~suffix:"__" c))
   |> String.concat "."
 
-let rec classify_in env visited depth ty =
+(* Is the root module of [p] one of [ids]? ([Path.head] fails on functor
+   applications such as [Map.Make(String).t].) *)
+let rec root_in (p : Path.t) ids =
+  match p with
+  | Pident id -> List.exists (Ident.same id) ids
+  | Pdot (p, _) | Pextra_ty (p, _) -> root_in p ids
+  | Papply _ -> false
+
+let rec classify_in ~generic_roots env visited depth ty =
   if depth > max_depth then Safe
   else
     (* The name the user wrote (e.g. [SM.t]), before expansion turns it into
@@ -58,7 +75,7 @@ let rec classify_in env visited depth ty =
       match Compat.view ty with Constr (p, _) -> Some p | _ -> None
     in
     let ty = try Ctype.expand_head env ty with _ -> ty in
-    let recur = classify_in env visited (depth + 1) in
+    let recur = classify_in ~generic_roots env visited (depth + 1) in
     match Compat.view ty with
     | Arrow _ | Package -> Functional
     | Var -> Generic
@@ -80,11 +97,18 @@ let rec classify_in env visited depth ty =
           | exception Not_found -> Safe (* unknown: avoid false positives *)
           | decl -> (
               let visited = p :: visited in
-              let recur = classify_in env visited (depth + 1) in
+              let recur = classify_in ~generic_roots env visited (depth + 1) in
               let inst t =
                 try Ctype.apply env decl.type_params t args with _ -> t
               in
               match Compat.decl_shape decl with
+              | Abstract_decl
+                when (match p with Pident _ -> true | _ -> false)
+                     || root_in p generic_roots ->
+                  (* A locally abstract type ([fun (type k) ...]) or a type
+                     from a functor parameter ([T.t] in [Make (T : S)]):
+                     type variables in disguise. *)
+                  Generic
               | Abstract_decl ->
                   Abstract (display_path (Option.value written ~default:p))
               | Manifest m -> recur (inst m)
@@ -96,8 +120,9 @@ and worst_of f ts =
     (fun acc t -> if acc = Functional then acc else worst acc (f t))
     Safe ts
 
-let classify (env : Env.t) (ty : Types.type_expr) : verdict =
-  classify_in env [] 0 ty
+let classify ?(generic_roots = []) (env : Env.t) (ty : Types.type_expr) :
+    verdict =
+  classify_in ~generic_roots env [] 0 ty
 
 (* The type of the first argument of a function type, if any. *)
 let first_arg env ty =

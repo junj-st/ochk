@@ -19,3 +19,5 @@ let fs = [ succ ]
 let o = None
 let p = fs <> [] && o = None
 let q = `A succ <> `B
+let r = ([ succ ], [ pred ]) <> ([], [])
+let fd = Unix.stdin = Unix.stdout

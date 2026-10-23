@@ -63,11 +63,30 @@ let decl_shape (d : type_declaration) : decl_shape =
            cstrs)
   | Type_open, _ -> Open_decl
 
-let init_load_path (cmt : Cmt_format.cmt_infos) =
+(* The directory the compiler ran in. Release builds ([dune build -p])
+   record the placeholder "/workspace_root", so when the recorded directory
+   is missing, walk up from the .cmt file to the first directory containing
+   the source file it was compiled from. *)
+let build_root ~cmt_file (cmt : Cmt_format.cmt_infos) =
+  if Sys.file_exists cmt.cmt_builddir then cmt.cmt_builddir
+  else
+    let rec up dir rel =
+      if Sys.file_exists (Filename.concat dir rel) then Some dir
+      else
+        let parent = Filename.dirname dir in
+        if parent = dir then None else up parent rel
+    in
+    let start = Filename.dirname cmt_file in
+    match cmt.cmt_sourcefile with
+    | Some src when Filename.is_relative src -> (
+        match up start src with Some d -> d | None -> Sys.getcwd ())
+    | _ -> Sys.getcwd ()
+
+let init_load_path ~root (cmt : Cmt_format.cmt_infos) =
   let resolve dir =
     if Filename.is_relative dir then
-      let in_builddir = Filename.concat cmt.cmt_builddir dir in
-      if Sys.file_exists in_builddir then in_builddir else dir
+      let in_root = Filename.concat root dir in
+      if Sys.file_exists in_root then in_root else dir
     else dir
   in
   let { Load_path.visible; hidden } = cmt.cmt_loadpath in

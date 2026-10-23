@@ -18,7 +18,7 @@ Map.Make(String).t and Hashtbl.t compared: SL002.
 
 Ints, strings, tuples, records, variants, lists, Uchar: no findings.
 
-  $ ocamlc -bin-annot -c fixtures/safe_types.ml
+  $ ocamlfind ocamlc -package unix -bin-annot -c fixtures/safe_types.ml
   $ ostd-lint fixtures/safe_types.cmt
 
 A record containing a map: SL002 (nested detection).
@@ -59,6 +59,10 @@ Generic code: nothing by default, SL003 with --generic.
   $ ostd-lint --generic fixtures/generic.cmt
   File "fixtures/generic.ml", line 1, characters 27-32:
   Warning SL003 [compare-generic]: polymorphic (=) on type variable 'a; generic code relying on polymorphic comparison. Take an equality or compare function as an argument.
+  File "fixtures/generic.ml", line 3, characters 27-39:
+  Warning SL003 [compare-generic]: polymorphic Hashtbl.hash on type variable k; generic code relying on polymorphic comparison. Take an equality or compare function as an argument.
+  File "fixtures/generic.ml", line 9, characters 27-28:
+  Warning SL003 [compare-generic]: polymorphic (=) on type variable T.t; generic code relying on polymorphic comparison. Take an equality or compare function as an argument.
   [1]
 
 Functions hidden in nested containers, Seq, objects, lazy values.
