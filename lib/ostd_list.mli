@@ -1,24 +1,24 @@
 (** Stdlib [List], extended.
 
-    Everything from {!Stdlib.List} is re-exported unchanged; the values below
-    are additions. None of them use polymorphic comparison: functions that
-    compare elements take an explicit [compare] or [eq] argument. *)
+    Everything from [Stdlib.List] is re-exported unchanged; the values below are
+    additions. None of them use polymorphic comparison: functions that compare
+    elements take an explicit [compare] or [eq] argument. *)
 
 include module type of Stdlib.List
 
 val split_at : int -> 'a list -> 'a list * 'a list
-(** [split_at n l] is [(take n l, drop n l)], computed in one pass.
-    @raise Invalid_argument if [n < 0]. *)
+(** [split_at n l] is [(take n l, drop n l)], computed in one pass. Raises
+    [Invalid_argument] if [n < 0]. *)
 
 val chunks : int -> 'a list -> 'a list list
 (** [chunks n l] splits [l] into consecutive sublists of length [n]; the last
-    one may be shorter. [chunks n [] = []].
-    @raise Invalid_argument if [n <= 0]. *)
+    one may be shorter. [chunks n [] = []]. Raises [Invalid_argument] if
+    [n <= 0]. *)
 
 val windows : int -> 'a list -> 'a list list
 (** [windows n l] is every contiguous sublist of [l] of length [n], in order. It
-    is [[]] when [l] is shorter than [n].
-    @raise Invalid_argument if [n <= 0]. *)
+    is [[]] when [l] is shorter than [n]. Raises [Invalid_argument] if [n <= 0].
+*)
 
 val group_by : ('a -> 'a -> bool) -> 'a list -> 'a list list
 (** [group_by eq l] groups {e consecutive} elements of [l] for which
@@ -26,8 +26,8 @@ val group_by : ('a -> 'a -> bool) -> 'a list -> 'a list list
 *)
 
 val last : 'a list -> 'a
-(** [last l] is the last element of [l].
-    @raise Invalid_argument if [l] is empty. *)
+(** [last l] is the last element of [l]. Raises [Invalid_argument] if [l] is
+    empty. *)
 
 val last_opt : 'a list -> 'a option
 (** [last_opt l] is the last element of [l], or [None] if [l] is empty. *)

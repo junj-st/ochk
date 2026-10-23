@@ -1,7 +1,7 @@
 (** Stdlib [Result], extended.
 
-    Everything from {!Stdlib.Result} is re-exported unchanged, including
-    {!Stdlib.Result.map_error}. *)
+    Everything from [Stdlib.Result] is re-exported unchanged, including
+    [Stdlib.Result.map_error]. *)
 
 include module type of Stdlib.Result
 

@@ -1,13 +1,13 @@
 (** Stdlib [Map], extended.
 
-    Everything from {!Stdlib.Map} is re-exported. {!S} and {!Make} are shadowed
+    Everything from [Stdlib.Map] is re-exported. {!S} and {!Make} are shadowed
     by versions with extra operations. [Make (Ord).t] is the same type as
     [Stdlib.Map.Make (Ord).t], so maps flow freely between code that uses ostd
     and code that does not. *)
 
 include module type of Stdlib.Map
 
-(** Output signature of {!Make}: {!Stdlib.Map.S} plus additions. *)
+(** Output signature of {!Make}: [Stdlib.Map.S] plus additions. *)
 module type S = sig
   include Stdlib.Map.S
 
@@ -34,6 +34,6 @@ module type S = sig
       key, in their original order. *)
 end
 
-(** Same as {!Stdlib.Map.Make}, with the additions of {!S}. *)
+(** Same as [Stdlib.Map.Make], with the additions of {!S}. *)
 module Make (Ord : OrderedType) :
   S with type key = Ord.t and type 'a t = 'a Stdlib.Map.Make(Ord).t

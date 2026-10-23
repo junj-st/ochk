@@ -1,7 +1,7 @@
 (** Stdlib [Option], extended.
 
-    Everything from {!Stdlib.Option} is re-exported unchanged. For a default
-    value use {!Stdlib.Option.value}. *)
+    Everything from [Stdlib.Option] is re-exported unchanged. For a default
+    value use [Stdlib.Option.value]. *)
 
 include module type of Stdlib.Option
 
