@@ -14,3 +14,9 @@ let obj =
 let e = obj = obj
 let lz = lazy 1
 let f = lz = lz
+
+type a = X of b | Y of (int -> int)
+and b = Z of a
+
+let g = X (Z (Y succ)) = Y pred
+let h = Z (Y succ) = Z (Y pred)

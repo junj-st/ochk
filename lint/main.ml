@@ -271,6 +271,7 @@ let lint_cmt file : Report.finding list =
       let root = Compat.build_root ~cmt_file:file cmt in
       Compat.init_load_path ~root cmt;
       Envaux.reset_cache ();
+      Classify.reset ();
       lint_structure ~builddir:root str
   | _ -> []
 
@@ -359,6 +360,10 @@ let () =
     |> List.filter (fun (f : Report.finding) -> enabled f.rule)
     |> Report.normalize
   in
+  if !Classify.skipped > 0 then
+    Printf.eprintf
+      "ostd-lint: note: %d comparison(s) not checked (type too large to analyse)\n"
+      !Classify.skipped;
   (match !format with
   | Text -> List.iter (Report.print_text stdout) findings
   | Json -> Report.print_json stdout findings);

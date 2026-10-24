@@ -81,6 +81,10 @@ Functions hidden in nested containers, Seq, objects, lazy values.
   Warning SL002 [compare-abstract]: polymorphic (=) on < x : int >; object is abstract, so the result depends on its internal representation. Compare it with a dedicated function instead.
   File "fixtures/nested.ml", line 16, characters 11-12:
   Warning SL002 [compare-abstract]: polymorphic (=) on int lazy_t; Lazy.t is abstract, so the result depends on its internal representation. Compare it with a dedicated function instead.
+  File "fixtures/nested.ml", line 21, characters 23-24:
+  Error SL001 [compare-functional]: polymorphic (=) on a, which contains functions; this raises Invalid_argument at runtime.
+  File "fixtures/nested.ml", line 22, characters 19-20:
+  Error SL001 [compare-functional]: polymorphic (=) on b, which contains functions; this raises Invalid_argument at runtime.
   [1]
 
 Identifiers re-exported through ostd are still caught.
