@@ -9,7 +9,7 @@
   `group_by`), Set (`union_all`), persistent `Heap` and `Deque`, opt-in
   `Safe`.
 - `ochk`: rules SL001 (compare-functional), SL002 (compare-abstract),
-  SL003 (compare-generic), SL004 (compare-opaque); abstract types are judged
+  SL003 (compare-generic), SL004 (compare-opaque), SL005 (compare-nan); abstract types are judged
   by their real representation, found through `.cmt` files;
   `[@ochk.allow]` suppression; `--only`, `--generic`, `--opaque`,
   `--format json`. Surveyed on 47 opam packages (`docs/lint-triage.md`).

@@ -4,7 +4,7 @@
 
 | Rule | Before look-through | After look-through |
 |---|---|---|
-| SL001 compare-functional | 2 (1 real) | 2 (1 real) |
+| SL001 compare-functional | 2 (0 real) | 2 (0 real) |
 | SL002 compare-abstract | 36 (2 real) | **1 (1 real)** |
 | SL004 compare-opaque (off by default) | — | 35 |
 
@@ -30,7 +30,7 @@ and examples excluded).
 
 | Package | Location | Verdict |
 |---|---|---|
-| ounit2 | `oUnitConf.ml:389` `List.sort Stdlib.compare specs` on `Arg` specs | **Latent crash.** Works only while every option name is unique; a duplicate key makes `compare` reach the closures and raise `Invalid_argument "compare: functional value"`. Fix: sort by key with `String.compare`. |
+| ounit2 | `oUnitConf.ml:389` `List.sort Stdlib.compare specs` on `Arg` specs | **Fragile, not reachable.** `compare` would raise `Invalid_argument "compare: functional value"` on two specs with the same flag *and* the same `Arg` constructor. ounit2 rejects duplicate variable names, and the only possible flag collision (`-no-foo` from `foo`'s reset flag vs. a variable named `no_foo`) pairs `Arg.Unit` with a different constructor, so `compare` stops before reaching the closures. Not reported upstream. |
 | ocamlformat-lib (vendored compiler code) | `warnings.ml:936` `doc = Format_doc.Doc.empty` | Harmless: comparing with an empty value never reaches closures. ochk only recognises syntactic constants (`[]`), not a named empty value. |
 
 ## SL002 (compare-abstract): 36 findings in 7 packages
@@ -47,7 +47,7 @@ and examples excluded).
 
 ## Conclusions
 
-1. **SL001 is precise but rare:** 1 real latent bug in 47 packages, 1 harmless.
+1. **SL001 found no reachable bugs in 47 packages.** Both findings compare values that do contain closures, so the code is fragile, but neither can raise through the code paths that exist. Mature libraries rarely ship this bug; the rule is more useful on code still being written, run in CI.
 2. **SL002 was mostly noise as first designed:** 2 of 36 mattered, since most
    abstract types are plain `int` or `string` underneath. Looking through the
    abstraction fixed this (see Summary): SL002 is now 1 finding, and it is
@@ -64,3 +64,8 @@ and examples excluded).
 | `[@@deriving compare, equal]` output | core | Skip ppx-generated code |
 | `/workspace_root` build dir in release builds | all `-p` builds | Find the real build root from the `.cmt` location |
 | Hours-long run on odoc's large recursive types | odoc | Memoize verdicts, cap work per check (reported on stderr) |
+
+## SL005 (compare-nan)
+
+Added after the survey; the packages above were not re-checked for it (their
+sources were deleted after the run).

@@ -85,6 +85,19 @@ The same across files, through an .mli.
   Warning SL002 [compare-abstract]: polymorphic (=) on Abs_lib.Names.t; Abs_lib.Names.t is a Set underneath, so equal contents can compare as different. Use Abs_lib.Names.equal instead.
   [1]
 
+Comparing with nan: always false (or always true for <>). Float.is_nan,
+Float.equal and compare are fine.
+
+  $ ocamlc -bin-annot -c fixtures/nan.ml
+  $ ochk fixtures/nan.cmt
+  File "fixtures/nan.ml", line 2, characters 13-14:
+  Error SL005 [compare-nan]: comparing with nan using (=) is always false: NaN is unordered and unequal to everything, including itself. Use Float.is_nan instead.
+  File "fixtures/nan.ml", line 3, characters 13-15:
+  Error SL005 [compare-nan]: comparing with nan using (<>) is always true: NaN is unordered and unequal to everything, including itself. Use Float.is_nan instead.
+  File "fixtures/nan.ml", line 4, characters 15-16:
+  Error SL005 [compare-nan]: comparing with nan using (<) is always false: NaN is unordered and unequal to everything, including itself. Use Float.is_nan instead.
+  [1]
+
 Generic code: nothing by default, SL003 with --generic.
 
   $ ocamlc -bin-annot -c fixtures/generic.ml

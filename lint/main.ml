@@ -206,6 +206,16 @@ let written_in_source ~builddir (loc : Location.t) name =
       in
       go 0
 
+let nan_ops = [ "(=)"; "(<>)"; "(<)"; "(>)"; "(<=)"; "(>=)" ]
+
+let is_nan (e : expression) =
+  match e.exp_desc with
+  | Texp_ident (p, _, _) -> (
+      match Targets.normalize (Path.name p) with
+      | Some ("nan" | "Float.nan") -> true
+      | _ -> false)
+  | _ -> false
+
 let lint_structure ~builddir (str : structure) : Report.finding list =
   let findings = ref [] in
   let functor_params = ref [] in
@@ -227,6 +237,21 @@ let lint_structure ~builddir (str : structure) : Report.finding list =
         Fun.protect ~finally:(fun () -> stack := List.tl !stack) f
   in
   let trivial = ref [] in
+  let add_finding (loc : Location.t) rule message =
+    let s = loc.loc_start and en = loc.loc_end in
+    findings :=
+      {
+        Report.file = s.pos_fname;
+        line = s.pos_lnum;
+        col_start = s.pos_cnum - s.pos_bol;
+        col_end =
+          (if en.pos_lnum = s.pos_lnum then en.pos_cnum - en.pos_bol
+           else s.pos_cnum - s.pos_bol + 1);
+        rule;
+        message;
+      }
+      :: !findings
+  in
   let check_ident (e : expression) path =
     match Targets.find path with
     | None -> ()
@@ -250,22 +275,32 @@ let lint_structure ~builddir (str : structure) : Report.finding list =
                   message env ~name ~verdict ~ty_str:(Lazy.force ty_str)
                 with
                 | Some (rule, msg) when not (is_allowed rule) ->
-                    let s = e.exp_loc.loc_start and en = e.exp_loc.loc_end in
-                    findings :=
-                      {
-                        Report.file = s.pos_fname;
-                        line = s.pos_lnum;
-                        col_start = s.pos_cnum - s.pos_bol;
-                        col_end =
-                          (if en.pos_lnum = s.pos_lnum then
-                             en.pos_cnum - en.pos_bol
-                           else s.pos_cnum - s.pos_bol + 1);
-                        rule;
-                        message = msg;
-                      }
-                      :: !findings
+                    add_finding e.exp_loc rule msg
                 | _ -> ())))
     | Some _ -> ()
+  in
+  (* SL005: [x = nan] is always false, [x <> nan] always true. *)
+  let check_nan (fn : expression) args =
+    match fn.exp_desc with
+    | Texp_ident (p, _, _) -> (
+        match Targets.find p with
+        | Some op
+          when List.mem op nan_ops && (not fn.exp_loc.loc_ghost)
+               && written_in_source ~builddir fn.exp_loc op
+               && List.exists
+                    (function _, Some a -> is_nan a | _, None -> false)
+                    args
+               && not (is_allowed Report.SL005) ->
+            let bare = String.sub op 1 (String.length op - 2) in
+            let always = if String.equal bare "<>" then "true" else "false" in
+            add_finding fn.exp_loc Report.SL005
+              (Printf.sprintf
+                 "comparing with nan using %s is always %s: NaN is unordered \
+                  and unequal to everything, including itself. Use \
+                  Float.is_nan instead."
+                 op always)
+        | _ -> ())
+    | _ -> ()
   in
   let open Tast_iterator in
   let iter =
@@ -277,14 +312,16 @@ let lint_structure ~builddir (str : structure) : Report.finding list =
               (match e.exp_desc with
               | Texp_ident (path, _, _) ->
                   if not (List.memq e !trivial) then check_ident e path
-              | Texp_apply (fn, args)
-                when List.exists
-                       (function
-                         | _, Some a -> is_constant a | _, None -> false)
-                       args ->
-                  (* [l <> []], [x = None]: comparing with a constant never
-                     inspects the other value, so it is always safe. *)
-                  trivial := fn :: !trivial
+              | Texp_apply (fn, args) ->
+                  check_nan fn args;
+                  if
+                    List.exists
+                      (function _, Some a -> is_constant a | _, None -> false)
+                      args
+                  then
+                    (* [l <> []], [x = None]: comparing with a constant never
+                       inspects the other value, so it is always safe. *)
+                    trivial := fn :: !trivial
               | _ -> ());
               default_iterator.expr self e));
       module_expr =
@@ -399,7 +436,7 @@ let () =
         match rule with
         | Report.SL003 -> !generic
         | SL004 -> !opaque
-        | SL001 | SL002 -> true)
+        | SL001 | SL002 | SL005 -> true)
   in
   let errors = ref 0 in
   let findings =

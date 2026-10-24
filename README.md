@@ -2,9 +2,11 @@
 
 **Type-aware bug finder for OCaml.**
 
-`ochk` reads the typed `.cmt` files dune already produces and reports bugs
-that need type information to find, not style issues. It works on any dune
-project with no code changes:
+`ochk` catches polymorphic comparison bugs: `=` and `compare` on functions,
+Maps, Sets, Hashtbls and other types where structural comparison gives wrong
+answers or raises, plus comparisons with `nan`. It reads the typed `.cmt` files
+dune already produces, so it reports bugs that need type information to find,
+not style issues. It works on any dune project with no code changes:
 
 ```sh
 dune build
@@ -13,7 +15,7 @@ ochk _build/default
 
 ```
 File "src/portfolio.ml", line 42, characters 10-11:
-Warning SL002 [compare-abstract]: polymorphic (=) on int SM.t; SM.t is abstract, so the result depends on its internal representation. Use SM.equal instead.
+Warning SL002 [compare-abstract]: polymorphic (=) on int SM.t; SM.t is a Map underneath, so equal contents can compare as different. Use SM.equal instead.
 ```
 
 Requires OCaml 5.3. `ochk` must be built with the same compiler as the code it
@@ -21,8 +23,7 @@ checks (it says so clearly if not).
 
 ## Rules
 
-The first family of rules catches **polymorphic comparison** used where it is
-a bug:
+The rules catch **polymorphic comparison** used where it is a bug:
 
 | Rule | Name | Default | Flags |
 |---|---|---|---|
@@ -30,6 +31,7 @@ a bug:
 | SL002 | compare-abstract | warning | types that are, or hide, a `Map`, `Set`, `Hashtbl`, `Buffer`, lazy value or object: equal contents can compare as different |
 | SL003 | compare-generic | off (`--generic`) | type variables: generic code relying on polymorphic compare |
 | SL004 | compare-opaque | off (`--opaque`) | abstract types that are safe underneath (an `int`, a `string`) or not visible: works today, but bypasses the module's own `equal` |
+| SL005 | compare-nan | error | `x = nan` (always false), `x <> nan` (always true), `x < nan`, …: use `Float.is_nan` |
 
 Abstract types are judged by what they hide. ochk follows them to their
 definition, in the same file or in the defining module's `.cmt` (dune builds
@@ -49,8 +51,8 @@ It looks through nested types (a record holding a map, a list of closures,
 - generic code (locally abstract types, functor parameters) unless you pass
   `--generic`
 
-Planned rules: `=` on floats (NaN), `Hashtbl.hash` on types with a custom
-equality, polymorphic `Hashtbl` keyed by abstract types.
+Planned rules: `Hashtbl.hash` on types with a custom equality, polymorphic
+`Hashtbl` keyed by abstract types.
 
 ## Usage
 
