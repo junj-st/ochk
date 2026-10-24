@@ -3,4 +3,5 @@
  (deps
   %{bin:ochk}
   (package ostd)
-  (glob_files fixtures/*.ml)))
+  (glob_files fixtures/*.ml)
+  (glob_files fixtures/*.mli)))

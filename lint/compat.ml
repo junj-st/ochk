@@ -115,3 +115,36 @@ let string_payload (p : Parsetree.payload) : string option =
       ] ->
       Some s
   | _ -> None
+
+(* [find_type_in_sig sg ["M"; "N"; "t"]]: the declaration of [M.N.t] in
+   [sg], following nested module signatures. *)
+let rec find_type_in_sig (sg : Types.signature) comps :
+    Types.type_declaration option =
+  match comps with
+  | [] -> None
+  | [ name ] ->
+      List.find_map
+        (function
+          | Types.Sig_type (id, d, _, _) when Ident.name id = name -> Some d
+          | _ -> None)
+        sg
+  | m :: rest ->
+      List.find_map
+        (function
+          | Types.Sig_module (id, _, md, _, _) when Ident.name id = m -> (
+              match md.md_type with
+              | Mty_signature sg -> find_type_in_sig sg rest
+              | _ -> None)
+          | _ -> None)
+        sg
+
+(* The signature a module expression really has, before any [: S]
+   constraint hides it, and the environment its types live in. *)
+let rec unconstrained (me : Typedtree.module_expr) =
+  match me.mod_desc with
+  | Tmod_constraint (inner, _, _, _) -> unconstrained inner
+  | Tmod_structure s -> (s.str_type, s.str_final_env)
+  | _ -> (
+      match me.mod_type with
+      | Mty_signature sg -> (sg, me.mod_env)
+      | _ -> ([], me.mod_env))

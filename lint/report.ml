@@ -1,26 +1,32 @@
 (* Rules, findings, and compiler-style / JSON output. *)
 
-type rule = SL001 | SL002 | SL003
+type rule = SL001 | SL002 | SL003 | SL004
 
-let rule_id = function SL001 -> "SL001" | SL002 -> "SL002" | SL003 -> "SL003"
+let rule_id = function
+  | SL001 -> "SL001"
+  | SL002 -> "SL002"
+  | SL003 -> "SL003"
+  | SL004 -> "SL004"
 
 let rule_name = function
   | SL001 -> "compare-functional"
   | SL002 -> "compare-abstract"
   | SL003 -> "compare-generic"
+  | SL004 -> "compare-opaque"
 
 let rule_of_string s =
   match String.uppercase_ascii (String.trim s) with
   | "SL001" -> Some SL001
   | "SL002" -> Some SL002
   | "SL003" -> Some SL003
+  | "SL004" -> Some SL004
   | _ -> None
 
-let all_rules = [ SL001; SL002; SL003 ]
+let all_rules = [ SL001; SL002; SL003; SL004 ]
 
 type severity = Error | Warning
 
-let severity = function SL001 -> Error | SL002 | SL003 -> Warning
+let severity = function SL001 -> Error | SL002 | SL003 | SL004 -> Warning
 let severity_string = function Error -> "Error" | Warning -> "Warning"
 
 type finding = {

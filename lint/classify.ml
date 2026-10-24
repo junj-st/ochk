@@ -3,14 +3,26 @@
 type verdict =
   | Safe
   | Generic  (** a type variable: generic code relying on polymorphic compare *)
-  | Abstract of string  (** display name of the abstract type *)
+  | Opaque of string
+      (** an abstract type whose representation is safe to compare, or not
+          visible: works today, but bypasses the module's own [equal] *)
+  | Abstract of { name : string; hidden : string }
+      (** an abstract type [name] hiding a representation for which structural
+          comparison is wrong, described by [hidden] *)
   | Functional  (** contains closures: compare raises at runtime *)
 
 let rank = function
   | Safe -> 0
   | Generic -> 1
-  | Abstract _ -> 2
-  | Functional -> 3
+  | Opaque _ -> 2
+  | Abstract _ -> 3
+  | Functional -> 4
+
+(* Finds the real definition of an abstract type; set by the driver to
+   [Impl.resolve]. *)
+let resolver : (Env.t -> Path.t -> (Types.type_declaration * Env.t) option) ref
+    =
+  ref (fun _ _ -> None)
 
 let worst a b = if rank b > rank a then b else a
 
@@ -57,6 +69,23 @@ let display_path p =
   String.split_on_char '.' name
   |> List.filter (fun c -> not (String.ends_with ~suffix:"__" c))
   |> String.concat "."
+
+(* Representations for which structural comparison gives wrong answers:
+   equal contents, different internal shape (balanced trees, hash tables,
+   buffer capacity), or identity semantics. *)
+let unsafe_kind (p : Path.t) =
+  let n = display_path p in
+  let starts prefix = String.starts_with ~prefix n in
+  if starts "Map.Make(" || starts "MoreLabels.Map.Make(" then Some "a Map"
+  else if starts "Set.Make(" || starts "MoreLabels.Set.Make(" then Some "a Set"
+  else if
+    n = "Hashtbl.t" || n = "MoreLabels.Hashtbl.t" || starts "Hashtbl.Make("
+    || starts "Hashtbl.MakeSeeded("
+  then Some "a hash table"
+  else if n = "Buffer.t" then Some "a buffer"
+  else if n = "Weak.t" || starts "Weak.Make(" || starts "Ephemeron." then
+    Some "a weak table"
+  else None
 
 (* Is the root module of [p] one of [ids]? ([Path.head] fails on functor
    applications such as [Map.Make(String).t].) *)
@@ -105,13 +134,14 @@ let rec classify_in ~generic_roots env visited depth ty =
     | Arrow _ | Package -> Functional
     | Var -> Generic
     | Poly t -> recur t
-    | Object -> Abstract "object"
+    | Object -> Abstract { name = "object"; hidden = "compared by identity" }
     | Tuple ts | Poly_variant ts -> worst_of recur ts
     | Other -> Safe
     | Constr (p, args) ->
         if mem_path p safe_builtins || List.mem (Path.name p) safe_named then
           Safe
-        else if Path.same p Predef.path_lazy_t then Abstract "Lazy.t"
+        else if Path.same p Predef.path_lazy_t then
+          Abstract { name = "Lazy.t"; hidden = "a lazy value" }
         else if mem_path p containers then worst_of recur args
         else if List.exists (Path.same p) visited then (
           (* Recursive occurrence: the shape is already being checked, but
@@ -144,8 +174,31 @@ and classify_decl ~generic_roots env visited depth written p args =
                      from a functor parameter ([T.t] in [Make (T : S)]):
                      type variables in disguise. *)
           Generic
-      | Abstract_decl ->
-          Abstract (display_path (Option.value written ~default:p))
+      | Abstract_decl -> (
+          let name = display_path (Option.value written ~default:p) in
+          match unsafe_kind p with
+          | Some hidden -> Abstract { name; hidden }
+          | None -> (
+              (* Look through the abstraction at the real definition. *)
+              match try !resolver env p with _ -> None with
+              | None -> Opaque name
+              | Some (d, env') -> (
+                  let inst' t =
+                    try Ctype.apply env' d.type_params t args with _ -> t
+                  in
+                  let recur' =
+                    classify_in ~generic_roots env' visited (depth + 1)
+                  in
+                  let v =
+                    match Compat.decl_shape d with
+                    | Manifest m -> recur' (inst' m)
+                    | Fields ts -> worst_of recur' (List.map inst' ts)
+                    | Abstract_decl | Open_decl -> Safe
+                  in
+                  match v with
+                  | Functional -> Functional
+                  | Abstract a -> Abstract { name; hidden = a.hidden }
+                  | Safe | Generic | Opaque _ -> Opaque name)))
       | Manifest m -> recur (inst m)
       | Fields ts -> worst_of recur (List.map inst ts)
       | Open_decl -> Safe)

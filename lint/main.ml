@@ -32,6 +32,24 @@ let value_exists env name =
       | _ -> true
       | exception _ -> false)
 
+(* "Use M.equal instead." when [M.equal] (or [M.compare]) exists. *)
+let hint env ~name t =
+  let modname =
+    match String.rindex_opt t '.' with Some i -> String.sub t 0 i | None -> ""
+  in
+  let fn =
+    if List.mem name [ "compare"; "(<)"; "(>)"; "(<=)"; "(>=)"; "min"; "max" ]
+    then "compare"
+    else "equal"
+  in
+  let candidate = modname ^ "." ^ fn in
+  if
+    modname <> ""
+    && (not (String.equal name "Hashtbl.hash"))
+    && value_exists env candidate
+  then Printf.sprintf "Use %s instead." candidate
+  else "Compare it with a dedicated function instead."
+
 let message env ~name ~verdict ~ty_str =
   match (verdict : Classify.verdict) with
   | Functional ->
@@ -41,34 +59,41 @@ let message env ~name ~verdict ~ty_str =
             "polymorphic %s on %s, which contains functions; this raises \
              Invalid_argument at runtime."
             name ty_str )
-  | Abstract t ->
-      let modname =
-        match String.rindex_opt t '.' with
-        | Some i -> String.sub t 0 i
-        | None -> ""
-      in
-      let fn =
-        if
-          List.mem name
-            [ "compare"; "(<)"; "(>)"; "(<=)"; "(>=)"; "min"; "max" ]
-        then "compare"
-        else "equal"
-      in
-      let candidate = modname ^ "." ^ fn in
-      let hint =
-        if
-          modname <> ""
-          && String.equal name "Hashtbl.hash" |> not
-          && value_exists env candidate
-        then Printf.sprintf "Use %s instead." candidate
-        else "Compare it with a dedicated function instead."
+  | Abstract { name = "object"; _ } ->
+      Some
+        ( Report.SL002,
+          Printf.sprintf
+            "polymorphic %s on %s; objects are compared by identity, not by \
+             contents. Compare them with a dedicated method instead."
+            name ty_str )
+  | Abstract { name = "Lazy.t"; _ } ->
+      Some
+        ( Report.SL002,
+          Printf.sprintf
+            "polymorphic %s on %s; an unforced lazy value raises \
+             Invalid_argument and a forced one compares its result. Force the \
+             values and compare the results instead."
+            name ty_str )
+  | Abstract { name = t; hidden } ->
+      let subject =
+        if String.equal t ty_str || String.ends_with ~suffix:(" " ^ t) ty_str
+        then ty_str
+        else Printf.sprintf "%s, which contains %s" ty_str t
       in
       Some
         ( Report.SL002,
           Printf.sprintf
-            "polymorphic %s on %s; %s is abstract, so the result depends on \
-             its internal representation. %s"
-            name ty_str t hint )
+            "polymorphic %s on %s; %s is %s underneath, so equal contents can \
+             compare as different. %s"
+            name subject t hidden (hint env ~name t) )
+  | Opaque t ->
+      Some
+        ( Report.SL004,
+          Printf.sprintf
+            "polymorphic %s on %s; %s is abstract. Comparing its \
+             representation works today (or it is not visible), but bypasses \
+             the module's own comparison. %s"
+            name ty_str t (hint env ~name t) )
   | Generic ->
       Some
         ( Report.SL003,
@@ -263,8 +288,8 @@ let lint_cmt file : Report.finding list =
       in
       raise
         (Tool_error
-           (Printf.sprintf "%s: %s (ochk was built with OCaml %s)" file
-              reason Sys.ocaml_version))
+           (Printf.sprintf "%s: %s (ochk was built with OCaml %s)" file reason
+              Sys.ocaml_version))
   in
   match cmt.cmt_annots with
   | Implementation str ->
@@ -272,6 +297,7 @@ let lint_cmt file : Report.finding list =
       Compat.init_load_path ~root cmt;
       Envaux.reset_cache ();
       Classify.reset ();
+      Impl.set_current str;
       lint_structure ~builddir:root str
   | _ -> []
 
@@ -286,15 +312,19 @@ let rec find_cmts path acc =
 type format = Text | Json
 
 let () =
+  Classify.resolver := Impl.resolve;
   let generic = ref false in
+  let opaque = ref false in
   let only = ref None in
   let format = ref Text in
   let paths = ref [] in
   let usage =
-    "ochk [--generic] [--only SL001,SL002] [--format text|json] [PATH...]\n\n\
+    "ochk [--generic] [--opaque] [--only SL001,SL002] [--format text|json] \
+     [PATH...]\n\n\
      Reads .cmt files under each PATH (default: .) and reports polymorphic \
      comparison on functions (SL001), abstract types (SL002) and, with \
-     --generic, type variables (SL003).\n\
+     --generic, type variables (SL003); with --opaque, abstract types that are \
+     safe underneath (SL004).\n\
      Exit codes: 0 = no findings, 1 = findings, 2 = tool error.\n"
   in
   let set_only s =
@@ -307,6 +337,7 @@ let () =
   let specs =
     [
       ("--generic", Arg.Set generic, " Enable SL003 (compare-generic)");
+      ("--opaque", Arg.Set opaque, " Enable SL004 (compare-opaque)");
       ( "--only",
         Arg.String set_only,
         "RULES Only report these comma-separated rules" );
@@ -332,7 +363,11 @@ let () =
   let enabled rule =
     match !only with
     | Some rules -> List.mem rule rules
-    | None -> rule <> Report.SL003 || !generic
+    | None -> (
+        match rule with
+        | Report.SL003 -> !generic
+        | SL004 -> !opaque
+        | SL001 | SL002 -> true)
   in
   let errors = ref 0 in
   let findings =
