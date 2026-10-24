@@ -6,8 +6,8 @@ description:
 maintainer: ["junj-st"]
 authors: ["ostd contributors"]
 license: "MIT"
-homepage: "https://github.com/junj-st/ostd"
-bug-reports: "https://github.com/junj-st/ostd/issues"
+homepage: "https://github.com/junj-st/ochk"
+bug-reports: "https://github.com/junj-st/ochk/issues"
 depends: [
   "dune" {>= "3.14"}
   "ocaml" {>= "5.3.0" & < "5.4"}
@@ -29,4 +29,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/junj-st/ostd.git"
+dev-repo: "git+https://github.com/junj-st/ochk.git"

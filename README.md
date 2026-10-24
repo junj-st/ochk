@@ -71,7 +71,7 @@ let x = ... [@@ochk.allow]                 (* one binding, all rules *)
 ## Install
 
 ```sh
-opam pin add ochk https://github.com/junj-st/ostd.git
+opam pin add ochk https://github.com/junj-st/ochk.git
 ```
 
 ## Real-world results

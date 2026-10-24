@@ -7,7 +7,7 @@
 (generate_opam_files true)
 
 (source
- (github junj-st/ostd))
+ (github junj-st/ochk))
 
 (license MIT)
 
