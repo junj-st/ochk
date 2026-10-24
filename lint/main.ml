@@ -18,11 +18,41 @@ let allowed_by (attrs : Parsetree.attributes) : Report.rule list =
         | None -> [])
     attrs
 
+(* Printed type, without dune's internal alias modules ("Re__.Cset.t" ->
+   "Cset.t"), matching how [Classify] names types. *)
 let type_to_string env ty =
-  try
-    Printtyp.wrap_printing_env ~error:false env (fun () ->
-        Format.asprintf "%a" Printtyp.type_expr ty)
-  with _ -> "?"
+  let raw =
+    try
+      Printtyp.wrap_printing_env ~error:false env (fun () ->
+          Format.asprintf "%a" Printtyp.type_expr ty)
+    with _ -> "?"
+  in
+  let b = Buffer.create (String.length raw) in
+  let n = String.length raw in
+  let is_ident c =
+    match c with
+    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '\'' -> true
+    | _ -> false
+  in
+  let i = ref 0 in
+  while !i < n do
+    (* At the start of an identifier, skip "Foo__." *)
+    if is_ident raw.[!i] && (!i = 0 || not (is_ident raw.[!i - 1])) then (
+      let j = ref !i in
+      while !j < n && is_ident raw.[!j] do
+        incr j
+      done;
+      let word = String.sub raw !i (!j - !i) in
+      if String.ends_with ~suffix:"__" word && !j < n && raw.[!j] = '.' then
+        i := !j + 1
+      else (
+        Buffer.add_string b word;
+        i := !j))
+    else (
+      Buffer.add_char b raw.[!i];
+      incr i)
+  done;
+  Buffer.contents b
 
 let value_exists env name =
   match Longident.unflatten (String.split_on_char '.' name) with
@@ -48,6 +78,8 @@ let hint env ~name t =
     && (not (String.equal name "Hashtbl.hash"))
     && value_exists env candidate
   then Printf.sprintf "Use %s instead." candidate
+  else if String.equal name "Hashtbl.hash" then
+    "Hash it with a dedicated function instead."
   else "Compare it with a dedicated function instead."
 
 let message env ~name ~verdict ~ty_str =

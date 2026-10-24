@@ -27,8 +27,14 @@ a bug:
 | Rule | Name | Default | Flags |
 |---|---|---|---|
 | SL001 | compare-functional | error | values containing functions: `=` raises `Invalid_argument` at runtime |
-| SL002 | compare-abstract | warning | abstract types (`Map`, `Set`, `Hashtbl`, `Lazy.t`, objects, …): the result depends on internal layout |
+| SL002 | compare-abstract | warning | types that are, or hide, a `Map`, `Set`, `Hashtbl`, `Buffer`, lazy value or object: equal contents can compare as different |
 | SL003 | compare-generic | off (`--generic`) | type variables: generic code relying on polymorphic compare |
+| SL004 | compare-opaque | off (`--opaque`) | abstract types that are safe underneath (an `int`, a `string`) or not visible: works today, but bypasses the module's own `equal` |
+
+Abstract types are judged by what they hide. ochk follows them to their
+definition, in the same file or in the defining module's `.cmt` (dune builds
+and installs these), so `Id.t = int` is quiet while `Env.t = int StringMap.t`
+is SL002, and an abstract type hiding a closure is SL001.
 
 Checked: `=` `<>` `<` `>` `<=` `>=` `compare` `min` `max` `List.mem`
 `List.assoc` `List.assoc_opt` `List.mem_assoc` `List.remove_assoc`
@@ -49,7 +55,7 @@ equality, polymorphic `Hashtbl` keyed by abstract types.
 ## Usage
 
 ```sh
-ochk [--generic] [--only SL001,SL002] [--format text|json] [PATH...]
+ochk [--generic] [--opaque] [--only SL001,SL002] [--format text|json] [PATH...]
 ```
 
 Exit code: 0 = clean, 1 = findings, 2 = tool error.

@@ -1,5 +1,21 @@
 # ochk real-world survey (v0.1)
 
+## Summary
+
+| Rule | Before look-through | After look-through |
+|---|---|---|
+| SL001 compare-functional | 2 (1 real) | 2 (1 real) |
+| SL002 compare-abstract | 36 (2 real) | **1 (1 real)** |
+| SL004 compare-opaque (off by default) | — | 35 |
+
+"Look-through" is ochk following an abstract type to its definition (same
+file or the defining unit's `.cmt`) and warning only when the representation
+is unsafe to compare. The one SL002 left is `re`'s `Hashtbl.hash` on a `Set`.
+The eio `Mtime.t` case (unsigned `int64`, wrong only after ~292 years) is now
+SL004, a deliberate trade for precision.
+
+The tables below are the original run, before look-through.
+
 OCaml 5.3.0. 50 popular opam packages were fetched with `opam source`,
 type-checked with `dune build -p <pkg> @check`, and linted with
 `ochk --generic`. Counts below are for library code only (tests, benchmarks
@@ -32,12 +48,10 @@ and examples excluded).
 ## Conclusions
 
 1. **SL001 is precise but rare:** 1 real latent bug in 47 packages, 1 harmless.
-2. **SL002 is mostly noise as designed:** 2 of 36 matter. Most abstract types
-   are plain `int` or `string` underneath, where `=` is correct. Next step:
-   look through the abstraction using the defining module's `.cmt` (dune
-   installs them), and warn only when the hidden representation is itself
-   unsafe (sets, maps, closures, hash tables, lazy values). Keep the
-   "abstract, use `M.equal`" hint as a separate off-by-default rule.
+2. **SL002 was mostly noise as first designed:** 2 of 36 mattered, since most
+   abstract types are plain `int` or `string` underneath. Looking through the
+   abstraction fixed this (see Summary): SL002 is now 1 finding, and it is
+   real.
 
 ## False positives found and fixed during the survey
 
