@@ -70,7 +70,7 @@ libraries. **Decision** is what ostd v0.1 does.
 - **zanuda**: its `use_match_instead_of_equality` lint flags `if x = None`-style
   equality on option/list/bool as a *style* issue. Nothing classifies the
   operand type to catch functional or abstract comparisons, so SL001–SL003 stay
-  in `ostd-lint`.
+  in `ochk`.
 - **Base**: shadows polymorphic compare with `int`-only operators and offers
   `Poly`; `Ostd.Safe` follows the same pattern but is opt-in.
 

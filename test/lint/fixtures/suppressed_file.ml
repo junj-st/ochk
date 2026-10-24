@@ -1,4 +1,4 @@
-[@@@ostd.allow "SL002"]
+[@@@ochk.allow "SL002"]
 
 module SM = Map.Make (String)
 

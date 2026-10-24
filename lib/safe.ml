@@ -1,4 +1,4 @@
-[@@@ostd.allow "SL003"] (* Poly is the deliberate escape hatch. *)
+[@@@ochk.allow "SL003"] (* Poly is the deliberate escape hatch. *)
 
 let ( = ) : int -> int -> bool = Stdlib.( = )
 let ( <> ) : int -> int -> bool = Stdlib.( <> )

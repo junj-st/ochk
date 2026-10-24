@@ -1,5 +1,5 @@
 (executable
  (name main)
- (public_name ostd-lint)
- (package ostd-lint)
+ (public_name ochk)
+ (package ochk)
  (libraries compiler-libs.common))

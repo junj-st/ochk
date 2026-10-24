@@ -8,6 +8,6 @@
   `Syntax`), Map (`keys`, `values`, `find_or`, `update_or`, `merge_with`,
   `group_by`), Set (`union_all`), persistent `Heap` and `Deque`, opt-in
   `Safe`.
-- `ostd-lint`: rules SL001 (compare-functional), SL002 (compare-abstract),
-  SL003 (compare-generic); `[@ostd.allow]` suppression; `--only`,
+- `ochk`: rules SL001 (compare-functional), SL002 (compare-abstract),
+  SL003 (compare-generic); `[@ochk.allow]` suppression; `--only`,
   `--generic`, `--format json`.

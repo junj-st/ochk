@@ -1,9 +1,9 @@
-(* ostd-lint: flag polymorphic comparison on functions, abstract types and
+(* ochk: flag polymorphic comparison on functions, abstract types and
    (optionally) type variables, by reading the .cmt files of a build. *)
 
 open Typedtree
 
-let allow_attr = "ostd.allow"
+let allow_attr = "ochk.allow"
 
 (* Rules suppressed by a list of attributes. *)
 let allowed_by (attrs : Parsetree.attributes) : Report.rule list =
@@ -263,7 +263,7 @@ let lint_cmt file : Report.finding list =
       in
       raise
         (Tool_error
-           (Printf.sprintf "%s: %s (ostd-lint was built with OCaml %s)" file
+           (Printf.sprintf "%s: %s (ochk was built with OCaml %s)" file
               reason Sys.ocaml_version))
   in
   match cmt.cmt_annots with
@@ -291,7 +291,7 @@ let () =
   let format = ref Text in
   let paths = ref [] in
   let usage =
-    "ostd-lint [--generic] [--only SL001,SL002] [--format text|json] [PATH...]\n\n\
+    "ochk [--generic] [--only SL001,SL002] [--format text|json] [PATH...]\n\n\
      Reads .cmt files under each PATH (default: .) and reports polymorphic \
      comparison on functions (SL001), abstract types (SL002) and, with \
      --generic, type variables (SL003).\n\
@@ -339,7 +339,7 @@ let () =
     List.concat_map
       (fun path ->
         if not (Sys.file_exists path) then (
-          Printf.eprintf "ostd-lint: %s: no such file or directory\n" path;
+          Printf.eprintf "ochk: %s: no such file or directory\n" path;
           incr errors;
           [])
         else
@@ -347,11 +347,11 @@ let () =
             (fun file ->
               try lint_cmt file with
               | Tool_error msg ->
-                  Printf.eprintf "ostd-lint: %s\n" msg;
+                  Printf.eprintf "ochk: %s\n" msg;
                   incr errors;
                   []
               | e ->
-                  Printf.eprintf "ostd-lint: %s: internal error: %s\n" file
+                  Printf.eprintf "ochk: %s: internal error: %s\n" file
                     (Printexc.to_string e);
                   incr errors;
                   [])
@@ -362,7 +362,7 @@ let () =
   in
   if !Classify.skipped > 0 then
     Printf.eprintf
-      "ostd-lint: note: %d comparison(s) not checked (type too large to analyse)\n"
+      "ochk: note: %d comparison(s) not checked (type too large to analyse)\n"
       !Classify.skipped;
   (match !format with
   | Text -> List.iter (Report.print_text stdout) findings

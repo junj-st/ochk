@@ -13,8 +13,8 @@ jobs:
         include:
           # Minimum supported version: library and linter.
           - ocaml-compiler: "5.3"
-            packages: "ostd,ostd-lint"
-            opamfiles: "./ostd.opam ./ostd-lint.opam"
+            packages: "ostd,ochk"
+            opamfiles: "./ostd.opam ./ochk.opam"
           # Latest 5.x: library only (the linter is tied to one compiler).
           - ocaml-compiler: "5"
             packages: "ostd"

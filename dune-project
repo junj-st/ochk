@@ -2,7 +2,7 @@
 
 (cram enable)
 
-(name ostd)
+(name ochk)
 
 (generate_opam_files true)
 
@@ -28,10 +28,10 @@
   (qcheck-alcotest :with-test)))
 
 (package
- (name ostd-lint)
- (synopsis "A linter that catches polymorphic-comparison bugs in OCaml code")
+ (name ochk)
+ (synopsis "Type-aware bug finder for OCaml")
  (description
-  "ostd-lint reads the .cmt files dune produces and flags polymorphic comparison (=, compare, List.mem, Hashtbl.hash, ...) on functions, abstract types such as Map and Hashtbl, and optionally generic code.")
+  "ochk reads the typed .cmt files dune produces and reports likely bugs that need type information to find. Its first rules catch polymorphic comparison (=, compare, List.mem, Hashtbl.hash, ...) on functions, on abstract types such as Map and Hashtbl, and optionally in generic code.")
  (depends
   (ocaml
    (and

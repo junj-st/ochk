@@ -1,6 +1,6 @@
 (cram
- (package ostd-lint)
+ (package ochk)
  (deps
-  %{bin:ostd-lint}
+  %{bin:ochk}
   (package ostd)
   (glob_files fixtures/*.ml)))
